@@ -1,34 +1,72 @@
-
 # importing libraries 
 import cv2 
-import numpy as np 
+import csv
+import numpy as np
 import json
 import sys
+import time
+from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import *
 
+from Processor import Processor
+
+btnPress = False
 
 import zmq
 
 context = zmq.Context()
 
-#  Socket to talk to server
-print("Connecting to hello world server…")
-socket = context.socket(zmq.REQ)
-socket.connect("tcp://10.0.0.61:5555")
+fileName = "cameraCalibration.csv"
+configArray = []
 
+processor = Processor(debug=True)
+
+ipAddress = processor.return_ipAddress()
+socketAddress = processor.return_socketAddress()
+
+#  Socket to talk to server
+
+print("Connecting to hello world server…")
+print(ipAddress)
+socket = context.socket(zmq.REQ)
+socket.connect("tcp://" + ipAddress + ":" + socketAddress)
 
 class Window(QWidget):
     def __init__(self, parent=None):
         super(Window, self).__init__(parent)
 
         self.config = dict()
+
         self.config['hmin'] = 0
         self.config['hmax'] = 0
         self.config['smin'] = 0
         self.config['smax'] = 0
         self.config['vmin'] = 0
         self.config['vmax'] = 0
+
+        self.config['brightness'] = 0
+        self.config['contrast'] = 0
+        self.config['saturation'] = 0
+        self.config['redbal'] = 0
+        self.config['bluebal'] = 0
+        self.config['gain'] = 0
+        self.config['sharpness'] = 0
+        self.config['absexp'] = 0
+
+        self.snapArray = []
+
+        with open('cameraSnapNum.csv') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            line_counts = 0
+            for row in csv_reader:
+                self.snapArray.append(0)
+                self.snapArray[line_counts] = int(row[1])
+                line_counts += 1
+
+        self.count = self.snapArray[0]
+        self.counter = self.snapArray[1]
 
         vbox = QVBoxLayout()
 
@@ -56,10 +94,19 @@ class Window(QWidget):
         self.v_max_value_label = QLabel(str(self.config['vmax']))
         vbox.addWidget(self.configureSlider("V max", 0, 255, self.config['vmax'], 5, self.vMaxChanged, self.v_max_slider, self.v_max_value_label))
 
+        self.button = QPushButton('Take Snapshot', self)
+        self.button.clicked.connect(self.on_click)
+        self.counter = 1
+
+        v = open("cameraSnapNum.csv","w+")
+        
+        v.write("cameraSnapNum," + str(self.count))
+        v.write("\n" + "btnNum," + str(self.counter))
+        v.close()
 
         self.setLayout(vbox)
 
-        self.setWindowTitle("PyQt5 Sliders")
+        self.setWindowTitle("Camera Calibration Menu")
         self.resize(600, 300)
 
     def configureSlider(self, title, min, max, value, interval, signal, slider, value_label):
@@ -91,13 +138,13 @@ class Window(QWidget):
         # Convert to JSON
         self.config['action'] = 'PUT'
         config_json = json.dumps(self.config)
-        print(config_json)
+        #print(config_json)
         msgOut = config_json
         socket.send(bytes(msgOut, 'utf-8'))
 
         #  Get the reply.
         message = socket.recv()
-        print("Received reply %s [ %s ]" % (msgOut, message))
+        #print("Received reply %s [ %s ]" % (msgOut, message))
 
     def setConfig(self, newConfig):
         self.config = newConfig
@@ -109,6 +156,9 @@ class Window(QWidget):
         self.s_max_slider.setValue(self.config['smax'])
         self.v_min_slider.setValue(self.config['vmin'])
         self.v_max_slider.setValue(self.config['vmax'])
+
+    def returnBtnPress():
+        return btnPress
 
     def hMinChanged(self):
         self.updateSliderValue('hmin', self.h_min_slider, self.h_min_value_label)
@@ -128,64 +178,124 @@ class Window(QWidget):
     def vMaxChanged(self):
         self.updateSliderValue('vmax', self.v_max_slider, self.v_max_value_label)
 
+    def writeFile(self):
+        f = open(fileName,"w+")
+        f.write("hmin," + str(self.config['hmin']))
+        f.write("\n" + "hmax," + str(self.config['hmax']))
+        f.write("\n" + "smin," + str(self.config['smin']))
+        f.write("\n" + "smax," + str(self.config['smax']))
+        f.write("\n" +  "vmin," + str(self.config['vmin']))
+        f.write("\n" +  "vmax," + str(self.config['vmax']))
+        f.close()
+
     def updateSliderValue(self, key, slider, value_label):
         self.config[key] = slider.value()
         value_label.setText(str(self.config[key]))
         self.sendConfig()
-    
+        
+        self.button.move(100,65)
+        # self.button.pressed.connect(self.on_click)
+        #self.button.clicked.connect(self.on_click)
+        self.writeFile()
+
+    def runCalibration(self):
+        app = QApplication(sys.argv)
+        calibrate = Window()
+
+        msg = dict()
+        msg['action'] = "GET"
+        retrieveConfigMsg = json.dumps(msg)
+ 
+        socket.send(bytes(retrieveConfigMsg, 'utf-8'))
+        
+        configStr = socket.recv()
+        currentConfig = json.loads(configStr)
+        #print(configStr)
+        calibrate.setConfig(currentConfig)
+
+        calibrate.show()
+
+        # Create a VideoCapture object and read from input file 
+        # cap = cv2.VideoCapture("http://10.0.0.61:8080/video_feed") 
+        
+        # # Check if camera opened successfully 
+        # if (cap.isOpened()== False):
+        #     print("Error opening video  file")
+        
+        # # Read until video is completed 
+        # while(cap.isOpened()): 
+            
+        #     # Capture frame-by-frame 
+        #     ret, frame = cap.read() 
+        #     if ret == True: 
+            
+        #         # Display the resulting frame 
+        #         cv2.imshow('Frame', frame) 
+            
+        #         # Press Q on keyboard to  exit 
+        #         if cv2.waitKey(25) & 0xFF == ord('q'): 
+        #             break
+            
+        #     # Break the loop 
+        #     else:  
+        #         break
+            
+        # # When everything done, release  
+        # # the video capture object
+        
+        # cap.release() 
+        
+        # # Closes all the frames 
+        # cv2.destroyAllWindows() 
+
+        sys.exit(app.exec_())
+
+    @pyqtSlot()
+    def on_click(self):
+
+        with open('cameraSnapNum.csv') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            line_counts = 0
+            for row in csv_reader:
+                self.snapArray.append(0)
+                self.snapArray[line_counts] = int(row[1])
+                line_counts += 1
+
+        self.count = self.snapArray[0]
+        self.counter = self.snapArray[1]
+
+        self.counter = 0
+        
+        v = open("cameraSnapNum.csv","w+")
+        
+        v.write("cameraSnapNum," + str(self.count))
+        v.write("\n" + "btnNum," + str(self.counter))
+        v.close()
+
+        if self.counter == 0:
+            print('PyQt5 button click')
+            processor.takeSnapshot()
+        
+        self.counter = 1
+
+        with open('cameraSnapNum.csv') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            line_counts = 0
+            for row in csv_reader:
+                self.snapArray.append(0)
+                self.snapArray[line_counts] = int(row[1])
+                line_counts += 1
+
+        self.count = self.snapArray[0]
+        self.counter = self.snapArray[1]
+        
+        f = open("cameraSnapNum.csv","w+")
+        
+        f.write("cameraSnapNum," + str(self.count))
+        f.write("\n" + "btnNum," + str(1))
+        f.close()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     calibrate = Window()
-
-    msg = dict()
-    msg['action'] = "GET"
-    retrieveConfigMsg = json.dumps(msg)
-
-    socket.send(bytes(retrieveConfigMsg, 'utf-8'))
-    
-    configStr = socket.recv()
-    currentConfig = json.loads(configStr)
-    print(configStr)
-    calibrate.setConfig(currentConfig)
-
-
-    calibrate.show()
-
-    # # Create a VideoCapture object and read from input file 
-    # cap = cv2.VideoCapture("http://10.0.0.61:8080/video_feed") 
-    
-    # # Check if camera opened successfully 
-    # if (cap.isOpened()== False):
-    #     print("Error opening video  file")
-    
-    # # Read until video is completed 
-    # while(cap.isOpened()): 
-        
-    #     # Capture frame-by-frame 
-    #     ret, frame = cap.read() 
-    #     if ret == True: 
-        
-    #         # Display the resulting frame 
-    #         cv2.imshow('Frame', frame) 
-        
-    #         # Press Q on keyboard to  exit 
-    #         if cv2.waitKey(25) & 0xFF == ord('q'): 
-    #             break
-        
-    #     # Break the loop 
-    #     else:  
-    #         break
-        
-    # # When everything done, release  
-    # # the video capture object
-     
-    # cap.release() 
-    
-    # # Closes all the frames 
-    # cv2.destroyAllWindows() 
-
-    sys.exit(app.exec_())
-
-
-
+    calibrate.runCalibration()

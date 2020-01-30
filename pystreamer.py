@@ -7,18 +7,33 @@ from Processor import Processor
 import threading
 import argparse
 import datetime
-#import imutils
+# import imutils
 import time
 import cv2
+import os
+import base64
 import numpy as np
 
 import json
 import zmq
 
+import tracemalloc
+
+tracemalloc.start()
+
+processor = Processor(debug=True)
+ipAddress = processor.ipAddress
+port = processor.port
+frame_rate = processor.frame_rate
+socketAddress = processor.socketAddress
+
 context = zmq.Context()
 socket = context.socket(zmq.REP)
-socket.bind("tcp://*:5555")
+socket.bind("tcp://*:" + socketAddress)
 
+visionSocket = context.socket(zmq.SUB)
+
+# os.system("v4l2-ctl --set-ctrl=exposure_auto=1")
 
 # initialize the output frame and a lock used to ensure thread-safe
 # exchanges of the output frames (useful when multiple browsers/tabs
@@ -33,10 +48,12 @@ app = Flask(__name__)
 # warmup
 #vs = VideoStream(usePiCamera=1).start()
 vs = cv2.VideoCapture(0)
-#vs.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 320);
-#vs.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, 240);
+vs.set(240, 180)
 
+# vs.set(cv2.CAP_PROP_BRIGHTNESS, -0.0000000000001);
 
+# vs.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 320);
+# vs.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, 240);
 
 m_H_MIN = 80;
 m_S_MIN = 45;
@@ -45,8 +62,6 @@ m_V_MIN = 0;
 m_H_MAX = 120;
 m_S_MAX = 255;
 m_V_MAX = 255;
-
-processor = Processor(debug=True)
 
 #vs = VideoStream(src=0).start()
 time.sleep(2.0)
@@ -57,6 +72,9 @@ def index():
         return render_template("index.html")
 
 def process_image(frameCount):
+
+        # socket.send(bytes("Test Recieve", 'utf-8'))
+
         # grab global references to the video stream, output frame, and
         # lock variables
         global vs, outputFrame, lock
@@ -76,7 +94,15 @@ def process_image(frameCount):
             # read the next frame from the video stream, resize it,
             # convert the frame to grayscale, and blur it
             rc, frame = vs.read()
-#                frame = imutils.resize(frame, width=400)
+
+            img = cv2.resize(frame,(640, 480))
+
+        #     encoded, buffer = cv2.imencode('.jpg', img)
+        #     socket.send_string(base64.b64encode(buffer))
+            
+        #     rc = vs.set(3,320)
+        #     rc = vs.set(4,240)
+            #frame = imutils.resize(frame, width=400)
             # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             # gray = cv2.GaussianBlur(gray, (7, 7), 0)
 
@@ -85,9 +111,18 @@ def process_image(frameCount):
             # cv2.putText(frame, timestamp.strftime(
             #         "%A %d %B %Y %I:%M:%S%p"), (10, frame.shape[0] - 10),
             #         cv2.FONT_HERSHEY_SIMPLEX, 0.35, (0, 0, 255), 1)
+            
 
-            outImg = processor.process(frame)
+            outImg = processor.process(img)
+
+            cv2.imwrite("camera.jpg", outImg)
             total += 1
+
+        #     visionSocket.connect("tcp://" + ipAddress + ":" + "5555")
+
+        #     data = visionSocket.recv()
+
+        #     stringMsg = data.decode('utf-8')
             
             end_time = datetime.datetime.now()
 
@@ -104,7 +139,8 @@ def process_image(frameCount):
             
             cv2.rectangle(outImg, (0, outImg.shape[0]), (outImg.shape[1], outImg.shape[0] - 40), (0, 0, 0), -1)
             cv2.putText(outImg, "FPS: {}".format(int(fps_avg)), (10, outImg.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-            
+        #     cv2.putText(outImg, "FPS: {}".format(str(stringMsg)), (10, outImg.shape[0] - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
             # acquire the lock, set the output frame, and release the
             # lock
             with lock:
@@ -143,9 +179,12 @@ def video_feed():
         return Response(generate(),
                 mimetype = "multipart/x-mixed-replace; boundary=frame")
 
+def toggleVerboseLogging():
+        toogleBool = True
+        return toggleBool
 
 def update_config():
-        while True:
+        while toggleVerboseLogging:
                 #  Wait for next request from client
                 message = socket.recv()
                 print("Received request: %s" % message)
@@ -171,29 +210,40 @@ def update_config():
 
 # check to see if this is the main thread of execution
 if __name__ == '__main__':
-        # construct the argument parser and parse command line arguments
-        ap = argparse.ArgumentParser()
-        ap.add_argument("-i", "--ip", type=str, required=True,
-                help="ip address of the device")
-        ap.add_argument("-o", "--port", type=int, required=True,
-                help="ephemeral port number of the server (1024 to 65535)")
-        ap.add_argument("-f", "--frame-count", type=int, default=32,
-                help="# of frames used to construct the background model")
-        args = vars(ap.parse_args())
 
-        # start a thread that will perform motion detection
         t = threading.Thread(target=process_image, args=(
-                args["frame_count"],))
+                frame_rate,))
         t.daemon = True
         t.start()
 
         t = threading.Thread(target=update_config)
         t.daemon = True
+        
         t.start()
 
-        # start the flask app
-        app.run(host=args["ip"], port=args["port"], debug=True,
+        app.run(host=ipAddress, port=int(port), debug=True,
                 threaded=True, use_reloader=False)
+
+
+        # # construct the argument parser and parse command line arguments
+        # ap = argparse.ArgumentParser()
+        # ap.add_argument("-i", "--ip", type=str, required=True,
+        #         help="ip address of the device")
+        # ap.add_argument("-o", "--port", type=int, required=True,
+        #         help="ephemeral port number of the server (1024 to 65535)")
+        # ap.add_argument("-f", "--frame-count", type=int, default=32,
+        #         help="# of frames used to construct the background model")
+        # args = vars(ap.parse_args())
+
+        # args["ip"] = ipAddress
+        # args["port"] = int(port)
+        # args["frame_count"] = 30
+        # # start a thread that will perform motion detection
+        
+
+        # # start the flask app
+        # app.run(host=ipAddress, port=int(port), debug=True,
+        #         threaded=True, use_reloader=False)
 
 # release the video stream pointer
 vs.release()
