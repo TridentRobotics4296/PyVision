@@ -50,6 +50,7 @@ class Window(QWidget):
         self.config['bri'] = 0
         self.config['sat'] = 0
         self.config['con'] = 0
+        self.config['tog'] = 0
         
         vbox = QVBoxLayout()
 
@@ -107,6 +108,10 @@ class Window(QWidget):
         self.con_slider = QSlider(Qt.Horizontal)
         self.con_value_label = QLabel(str(self.config['con']))
         vbox.addWidget(self.configureSlider("Contrast", 0 , 255, self.config['con'], 5, self.conChanged, self.con_slider, self.con_value_label))
+        
+        self.tog_slider = QSlider(Qt.Horizontal)
+        self.tog_value_label = QLabel(str(self.config['tog']))
+        vbox.addWidget(self.configureSlider("Mask Toggle", 0, 2, self.config['tog'], 5, self.togChanged, self.tog_slider, self.tog_value_label))
 
 
         v = open("cameraSnapNum.csv","w+")
@@ -178,6 +183,8 @@ class Window(QWidget):
         self.v_max_slider.setValue(self.config['vmax'])
         self.bri_slider.setValue(self.config['bri'])
         self.con_slider.setValue(self.config['con'])
+        self.tog_slider.setValue(self.config['tog'])
+
     def returnBtnPress(self):
         return btnPress
 
@@ -208,6 +215,10 @@ class Window(QWidget):
     def hMaxChanged(self):
         self.updateSliderValue('hmax', self.h_max_slider, self.h_max_value_label)
 
+    def togChanged(self):
+        self.updateSliderValue('tog', self.tog_slider, self.tog_value_label)
+
+
     def sMinChanged(self):
         self.updateSliderValue('smin', self.s_min_slider, self.s_min_value_label)
 
@@ -232,6 +243,8 @@ class Window(QWidget):
         f.write("\n" +  "bri," + str(self.config['bri']))
         f.write("\n" +  "sat," + str(self.config['sat']))
         f.write("\n" +  "con," + str(self.config['con']))
+        f.write("\n" +  "tog," + str(self.config['tog']))
+
         f.close()
 
     def updateSliderValue(self, key, slider, value_label):

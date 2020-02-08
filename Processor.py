@@ -13,7 +13,7 @@ class Processor:
     def __init__(self, width=640, height=480, debug=False):
         super().__init__()
 
-        self.ipAddress = "10.42.96.55"
+        self.ipAddress = "192.168.1.159"
         self.socketAddress = "5555"
         self.port = "8080"
         self.frameCounter = 5
@@ -26,6 +26,7 @@ class Processor:
         self.distance = 0
         self.inchesE = 0
         self.error = 0
+
 
         self.snapArray = []
 
@@ -64,6 +65,7 @@ class Processor:
         self.bri = configArray[7]
         self.sat = configArray[8]
         self.con = configArray[9]
+        self.tog = configArray[10]
 
         self.count = self.snapArray[0]
         self.frameCounter = self.snapArray[1]
@@ -91,6 +93,7 @@ class Processor:
         self.bri = config['bri']
         self.sat = config['sat']
         self.con = config['con']
+        self.tog = config['tog']
 
 
     def get_config(self):
@@ -105,6 +108,7 @@ class Processor:
         theConfig['bri'] = self.bri
         theConfig['sat'] = self.sat
         theConfig['con'] = self.con
+        theConfig['tog'] = self.tog
 
 
         return theConfig
@@ -160,7 +164,7 @@ class Processor:
 
         furthestLeft = [0, 0]
         furthestRight = [0, 0]
-        _, contours, hierarchy = cv2.findContours(blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contours, hierarchy = cv2.findContours(blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         cv2.drawContours(inimg, contours, -1, (255, 255, 255), 2)
         cv2.line(inimg, (320,0), (320,1000), (255, 50, 255), 2)
 
@@ -199,8 +203,12 @@ class Processor:
 
 
 
-
-        return inimg
+        if self.tog == 0:
+            return inimg
+        elif self.tog == 1: 
+            return mask
+        else:
+            return blur
 
 
         # hsv = cv2.cvtColor(inimg, cv2.COLOR_BGR2HSV)

@@ -1,10 +1,11 @@
-hmin,32
-hmax,153
-smin,78
+hmin,70
+hmax,255
+smin,0
 smax,255
-vmin,132
+vmin,0
 vmax,255
-exp,18
+exp,37
 bri,0
 sat,255
 con,255
+tog,0
