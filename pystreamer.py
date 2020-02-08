@@ -34,8 +34,7 @@ socket.bind("tcp://*:" + socketAddress)
 
 ctx = zmq.Context()
 s = context.socket(zmq.PUB)
-s.bind("tcp://*:5557")
-print("Test")
+s.bind("tcp://*:5556")
 
 visionSocket = context.socket(zmq.SUB)
 
@@ -55,30 +54,23 @@ app = Flask(__name__)
 #vs = VideoStream(usePiCamera=1).start()
 vs = cv2.VideoCapture(0)
 #vs.set(240, 180)
-# os.system("v4l2-ctl --set-ctrl=exposure_auto=1")
-# time.sleep(1)
-# os.system("v4l2-ctl --set-ctrl=gain=16")
-# time.sleep(1)
-# os.system("v4l2-ctl --set-ctrl=brightness=0")
-# time.sleep(1)
-# os.system("v4l2-ctl --set-ctrl=contrast=255")
-# time.sleep(1)
-# os.system("v4l2-ctl --set-ctrl=saturation=255")
-# time.sleep(1)
-# os.system("v4l2-ctl --set-ctrl=exposure_absolute=30")
-# time.sleep(2)
-# vs.set(cv2.CAP_PROP_BRIGHTNESS, -0.0000000000001);
+os.system("v4l2-ctl --set-ctrl=exposure_auto=1")
+time.sleep(1)
+os.system("v4l2-ctl --set-ctrl=gain=16")
+time.sleep(1)
+os.system("v4l2-ctl --set-ctrl=brightness=0")
+time.sleep(1)
+os.system("v4l2-ctl --set-ctrl=contrast=255")
+time.sleep(1)
+os.system("v4l2-ctl --set-ctrl=saturation=255")
+time.sleep(1)
+os.system("v4l2-ctl --set-ctrl=exposure_absolute=30")
+time.sleep(2)
+vs.set(cv2.CAP_PROP_BRIGHTNESS, -0.0000000000001);
 
 # vs.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 320);
 # vs.set(cv2.cv.CV_CAP_PROP_FRAME_HEIGHT, 240);
 
-m_H_MIN = 80;
-m_S_MIN = 45;
-m_V_MIN = 0;
-
-m_H_MAX = 120;
-m_S_MAX = 255;
-m_V_MAX = 255;
 
 #vs = VideoStream(src=0).start()
 time.sleep(2.0)
@@ -173,7 +165,7 @@ def process_image(frameCount):
                     s.send(bytes(massage, 'utf-8'))
                     #s.send_string(str(processor.angle)) 
 
-                    #processor.angle = 0
+                    processor.angle = 0
                     processor.error = 0 
                     processor.xDistance = 0
                     processor.pixelD = 0 

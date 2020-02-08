@@ -1,8 +1,7 @@
 import numpy as np
 import cv2
 import csv
-
-
+import socket
 import zmq
 
 context = zmq.Context()
@@ -13,7 +12,9 @@ class Processor:
     def __init__(self, width=640, height=480, debug=False):
         super().__init__()
 
-        self.ipAddress = "192.168.1.159"
+        # self.ipAddress = "192.168.1.159"
+        hostname = socket.gethostname()    
+        self.ipAddress = socket.gethostbyname(hostname)    
         self.socketAddress = "5555"
         self.port = "8080"
         self.frameCounter = 5
@@ -187,15 +188,14 @@ class Processor:
             if areas >= maxArea:
                 self.middle = int(((extRight[0] - extLeft[0]) / 2) + extLeft[0])
                 self.distance = int(extRight[0] - extLeft[0])
-                # jevois.sendSerial("left {} middle {} right {}".format(extLeft[0], middle, extRight[0]))
                 self.pixelD = self.middle - 320
                 # cv2.circle(inimg, (extLeft), 1, (100, 100, 255), 5)
                 # cv2.circle(inimg, (extRight), 1, (100, 100, 255), 5)
                 #cv2.line(mask, (self.middle, -750), (self.middle, 750), (0, 0, 255), 2)
                 # cv2.line(inimg, (extLeft), (extLeft[0] + pixelD, extRight[1]), (255, 100, 255), 2)
                 cv2.line(inimg, (self.middle,0),(self.middle, 1000), (255,100, 255), 2)
-            # cv2.circle(inimg, (extTop), 1,(100, 100, 255), 5)
-            # cv2.circle(inimg, (extBot), 1,(100, 100, 255), 5)
+                #cv2.circle(inimg, (extTop), 1,(100, 100, 255), 5)
+                #cv2.circle(inimg, (extBot), 1,(100, 100, 255), 5)
                 self.xDistance = 813.5 * 2.718281828459045 ** (-0.01378 * self.distance) + 46.67
                 self.inchesE = (39.25 / self.distance) * self.pixelD
                 self.angle = 0.2967 * self.inchesE
