@@ -71,7 +71,7 @@ class Window(QWidget):
 
         self.h_min_slider = QSlider(Qt.Horizontal)
         self.h_min_value_label = QLabel(str(self.config['hmin']))
-        vbox.addWidget(self.configureSlider("H min", 0, 255, self.config['hmin'], 5, self.hMinChanged, self.h_min_slider, self.h_min_value_label))
+        vbox.addWidget(self.configureSlider("H min", 0, 180, self.config['hmin'], 5, self.hMinChanged, self.h_min_slider, self.h_min_value_label))
 
         self.h_max_slider = QSlider(Qt.Horizontal)
         self.h_max_value_label = QLabel(str(self.config['hmax']))
