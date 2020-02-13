@@ -1,9 +1,9 @@
-hmin,60
-hmax,101
-smin,140
+hmin,0
+hmax,6
+smin,230
 smax,255
-vmin,30
-vmax,115
+vmin,62
+vmax,120
 exp,25
 bri,0
 sat,255

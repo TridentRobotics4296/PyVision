@@ -75,7 +75,7 @@ class Window(QWidget):
 
         self.h_max_slider = QSlider(Qt.Horizontal)
         self.h_max_value_label = QLabel(str(self.config['hmax']))
-        vbox.addWidget(self.configureSlider("H max", 0, 255, self.config['hmax'], 5, self.hMaxChanged, self.h_max_slider, self.h_max_value_label))
+        vbox.addWidget(self.configureSlider("H max", 0, 180, self.config['hmax'], 5, self.hMaxChanged, self.h_max_slider, self.h_max_value_label))
 
         self.s_min_slider = QSlider(Qt.Horizontal)
         self.s_min_value_label = QLabel(str(self.config['smin']))
@@ -93,6 +93,10 @@ class Window(QWidget):
         self.v_max_value_label = QLabel(str(self.config['vmax']))
         vbox.addWidget(self.configureSlider("V max", 0, 255, self.config['vmax'], 5, self.vMaxChanged, self.v_max_slider, self.v_max_value_label))
 
+        self.tog_slider = QSlider(Qt.Horizontal)
+        self.tog_value_label = QLabel(str(self.config['tog']))
+        vbox.addWidget(self.configureSlider("Mask Toggle", 0, 2, self.config['tog'], 5, self.togChanged, self.tog_slider, self.tog_value_label))
+
         self.exp_slider = QSlider(Qt.Horizontal)
         self.exp_value_label = QLabel(str(self.config['exp']))
         vbox.addWidget(self.configureSlider("Exposure", 0, 100, self.config['exp'], 5, self.expChanged, self.exp_slider, self.exp_value_label))
@@ -108,11 +112,6 @@ class Window(QWidget):
         self.con_slider = QSlider(Qt.Horizontal)
         self.con_value_label = QLabel(str(self.config['con']))
         vbox.addWidget(self.configureSlider("Contrast", 0 , 255, self.config['con'], 5, self.conChanged, self.con_slider, self.con_value_label))
-        
-        self.tog_slider = QSlider(Qt.Horizontal)
-        self.tog_value_label = QLabel(str(self.config['tog']))
-        vbox.addWidget(self.configureSlider("Mask Toggle", 0, 2, self.config['tog'], 5, self.togChanged, self.tog_slider, self.tog_value_label))
-
 
         v = open("cameraSnapNum.csv","w+")
         

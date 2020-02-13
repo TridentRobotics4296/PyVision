@@ -2,7 +2,7 @@ import numpy as np
 import cv2
 import csv
 import socket
-import zmq
+import zmq 
 
 context = zmq.Context()
 visionSocket = context.socket(zmq.PUB)
@@ -12,9 +12,9 @@ class Processor:
     def __init__(self, width=640, height=480, debug=False):
         super().__init__()
 
-        # self.ipAddress = "192.168.1.159"
-        hostname = socket.gethostname()    
-        self.ipAddress = socket.gethostbyname(hostname)    
+        self.ipAddress = "10.102.0.173"
+        # hostname = socket.gethostname()    
+        # self.ipAddress = socket.gethostbyname(hostname)    
         self.socketAddress = "5555"
         self.port = "8080"
         self.frameCounter = 5
@@ -138,7 +138,7 @@ class Processor:
 
 
         inimg = frame
-
+        
         # Start measuring image processing time (NOTE: does not account for input conversion time):
 
         hsv = cv2.cvtColor(inimg, cv2.COLOR_BGR2HSV)
@@ -147,8 +147,23 @@ class Processor:
         upper_range = np.array([self.hMax, self.sMax, self.vMax])
         mask = cv2.inRange(hsv, lower_range, upper_range)
 
+        lower_range_yellow = np.array([20, 140, 40])
+        upper_range_yellow = np.array([50, 255, 105])
+        maskYellow = cv2.inRange(hsv, lower_range_yellow, upper_range_yellow)
+
+        lower_range_red = np.array([0, 233, 22])
+        upper_range_red = np.array([12, 255, 64])
+        maskRed = cv2.inRange(hsv, lower_range_red, upper_range_red)
+
+        lower_range_green = np.array([60, 140, 30])
+        upper_range_green = np.array([101, 255, 115])
+        maskGreen = cv2.inRange(hsv, lower_range_green, upper_range_green)
+
         # stack = cv2.cvtColor(mask, cv2.COLOR_HSV2BGR)
         outimg = mask
+        # maskRed = mask
+        
+        # cv2.bitwise_and(inimg, inimg, mask=maskRed)
         # outimg = cv2.Laplacian(inimg, -1, ksize=5, scale=0.25, delta=127)
         cv2.bitwise_and(inimg, inimg, mask=mask)
        # cv2.line(inimg, (0,self.barheight), (10000, self.barheight), (255, 100, 255), 2)
@@ -160,14 +175,29 @@ class Processor:
         outheight = outimg.shape[0]
         outwidth = outimg.shape[1]
 
-        edge = cv2.Canny(mask, 100, 100)
         blur = cv2.GaussianBlur(mask, (3, 3), 0)
+        blurYellow = cv2.GaussianBlur(maskYellow, (3, 3), 0)
+        blurRed = cv2.GaussianBlur(maskRed, (3,3), 0)
+        blurGreen = cv2.GaussianBlur(maskGreen, (3,3), 0)
 
         furthestLeft = [0, 0]
         furthestRight = [0, 0]
+
         contours, hierarchy = cv2.findContours(blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        cv2.drawContours(inimg, contours, -1, (255, 255, 255), 2)
+        contoursRed, hierarchy = cv2.findContours(blurRed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contoursYellow, hierarchy = cv2.findContours(blurYellow, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contoursGreen, hierarchy = cv2.findContours(blurGreen, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        
+        # cv2.drawContours(inimg, contours, -1, (255, 255, 255), 2)
         cv2.line(inimg, (320,0), (320,1000), (255, 50, 255), 2)
+
+        cv2.drawContours(inimg, contoursRed, -1, (0,0,255), 3)
+        cv2.drawContours(inimg, contoursYellow, -1, (255,0,255), 3)
+        cv2.drawContours(inimg, contoursGreen, -1, (255,0,0), 3)
+        cv2.drawContours(inimg, contours, -1, (255,255,0), 3)
+
+        
+        # cv2.drawContours(inimg, contoursRed, -1, (0,0,255), 3)
 
         # epsilon = 0.1*cv2.arcLength(contours,True)
         # approx = cv2.approxPolyDP(contours,epsilon,True)
@@ -182,24 +212,30 @@ class Processor:
             extBot = tuple(c[c[:, :, 1].argmax()][0])
 
             areas = cv2.contourArea(c)
-            maxArea = np.argmax(areas)
+            maxArea = 10
 
 
             if areas >= maxArea:
-                self.middle = int(((extRight[0] - extLeft[0]) / 2) + extLeft[0])
-                self.distance = int(extRight[0] - extLeft[0])
-                self.pixelD = self.middle - 320
-                # cv2.circle(inimg, (extLeft), 1, (100, 100, 255), 5)
-                # cv2.circle(inimg, (extRight), 1, (100, 100, 255), 5)
-                #cv2.line(mask, (self.middle, -750), (self.middle, 750), (0, 0, 255), 2)
-                # cv2.line(inimg, (extLeft), (extLeft[0] + pixelD, extRight[1]), (255, 100, 255), 2)
-                cv2.line(inimg, (self.middle,0),(self.middle, 1000), (255,100, 255), 2)
-                #cv2.circle(inimg, (extTop), 1,(100, 100, 255), 5)
-                #cv2.circle(inimg, (extBot), 1,(100, 100, 255), 5)
-                self.xDistance = 813.5 * 2.718281828459045 ** (-0.01378 * self.distance) + 46.67
-                self.inchesE = (39.25 / self.distance) * self.pixelD
-                self.angle = 0.2967 * self.inchesE
-                self.error = (self.middle - 320) / 320
+                #red
+                # cv2.drawContours(inimg, contours, -1, (255,0,0), 3)
+
+                #yellow
+                
+
+                # self.middle = int(((extRight[0] - extLeft[0]) / 2) + extLeft[0])
+                # self.distance = int(extRight[0] - extLeft[0])
+                # self.pixelD = self.middle - 320
+                # # cv2.circle(inimg, (extLeft), 1, (100, 100, 255), 5)
+                # # cv2.circle(inimg, (extRight), 1, (100, 100, 255), 5)
+                # #cv2.line(mask, (self.middle, -750), (self.middle, 750), (0, 0, 255), 2)
+                # # cv2.line(inimg, (extLeft), (extLeft[0] + pixelD, extRight[1]), (255, 100, 255), 2)
+                # cv2.line(inimg, (self.middle,0),(self.middle, 1000), (255,100, 255), 2)
+                # #cv2.circle(inimg, (extTop), 1,(100, 100, 255), 5)
+                # #cv2.circle(inimg, (extBot), 1,(100, 100, 255), 5)
+                # self.xDistance = 813.5 * 2.718281828459045 ** (-0.01378 * self.distance) + 46.67
+                # self.inchesE = (39.25 / self.distance) * self.pixelD
+                # self.angle = 0.2967 * self.inchesE
+                # self.error = (self.middle - 320) / 320
 
 
 
@@ -208,7 +244,7 @@ class Processor:
         elif self.tog == 1: 
             return mask
         else:
-            return blur
+            return maskRed
 
 
         # hsv = cv2.cvtColor(inimg, cv2.COLOR_BGR2HSV)
