@@ -28,6 +28,7 @@ class Processor:
         self.inchesE = 0
         self.error = 0
 
+        self.maxArea = 100
 
         self.snapArray = []
 
@@ -159,6 +160,10 @@ class Processor:
         upper_range_green = np.array([101, 255, 115])
         maskGreen = cv2.inRange(hsv, lower_range_green, upper_range_green)
 
+        lower_range_blue = np.array([30, 225, 30])
+        upper_range_blue = np.array([101, 255, 115])
+        maskBlue = cv2.inRange(hsv, lower_range_blue, upper_range_blue)
+
         # stack = cv2.cvtColor(mask, cv2.COLOR_HSV2BGR)
         outimg = mask
         # maskRed = mask
@@ -179,25 +184,75 @@ class Processor:
         blurYellow = cv2.GaussianBlur(maskYellow, (3, 3), 0)
         blurRed = cv2.GaussianBlur(maskRed, (3,3), 0)
         blurGreen = cv2.GaussianBlur(maskGreen, (3,3), 0)
+        blurBlue = cv2.GaussianBlur(maskBlue, (3,3), 0)
 
         furthestLeft = [0, 0]
         furthestRight = [0, 0]
 
         contours, hierarchy = cv2.findContours(blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
         contoursRed, hierarchy = cv2.findContours(blurRed, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         contoursYellow, hierarchy = cv2.findContours(blurYellow, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         contoursGreen, hierarchy = cv2.findContours(blurGreen, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        contoursBlue, hierarchy = cv2.findContours(blurBlue, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         
         # cv2.drawContours(inimg, contours, -1, (255, 255, 255), 2)
         cv2.line(inimg, (320,0), (320,1000), (255, 50, 255), 2)
 
-        cv2.drawContours(inimg, contoursRed, -1, (0,0,255), 3)
-        cv2.drawContours(inimg, contoursYellow, -1, (255,0,255), 3)
-        cv2.drawContours(inimg, contoursGreen, -1, (255,0,0), 3)
-        cv2.drawContours(inimg, contours, -1, (255,255,0), 3)
-
-        
         # cv2.drawContours(inimg, contoursRed, -1, (0,0,255), 3)
+        # cv2.drawContours(inimg, contoursYellow, -1, (255,0,255), 3)
+        # cv2.drawContours(inimg, contoursGreen, -1, (255,0,0), 3)
+        # cv2.drawContours(inimg, contoursBlue, -1, (255,255,0), 3)
+
+        #BGR
+
+        if len(contoursRed) != 0:
+            c = max(contoursRed, key = cv2.contourArea)
+
+            if cv2.contourArea(c) > self.maxArea:
+                cv2.drawContours(inimg, c, -1, (0,0,255), 3)
+
+                extLeft = tuple(c[c[:, :, 0].argmin()][0])
+                extRight = tuple(c[c[:, :, 0].argmax()][0])
+
+                middleLine = int(((extRight[0] - extLeft[0]) / 2) + extLeft[0])
+                cv2.line(inimg, (middleLine, -750), (middleLine, 750), (0, 0, 255), 2)
+
+        if len(contoursYellow) != 0:
+            c = max(contoursYellow, key = cv2.contourArea)
+
+            if cv2.contourArea(c) > self.maxArea:
+                cv2.drawContours(inimg, c, -1, (0,255,255), 3)
+
+                extLeft = tuple(c[c[:, :, 0].argmin()][0])
+                extRight = tuple(c[c[:, :, 0].argmax()][0])
+
+                middleLine = int(((extRight[0] - extLeft[0]) / 2) + extLeft[0])
+                cv2.line(inimg, (middleLine, -750), (middleLine, 750), (0, 255, 255), 2)
+
+        if len(contoursGreen) != 0:
+            c = max(contoursGreen, key = cv2.contourArea)
+
+            if cv2.contourArea(c) > self.maxArea:
+                cv2.drawContours(inimg, c, -1, (0,255,0), 3)
+
+                extLeft = tuple(c[c[:, :, 0].argmin()][0])
+                extRight = tuple(c[c[:, :, 0].argmax()][0])
+
+                middleLine = int(((extRight[0] - extLeft[0]) / 2) + extLeft[0])
+                cv2.line(inimg, (middleLine, -750), (middleLine, 750), (0, 255, 0), 2)
+
+        if len(contoursBlue) != 0:
+            c = max(contoursBlue, key = cv2.contourArea)
+
+            if cv2.contourArea(c) > self.maxArea:
+                cv2.drawContours(inimg, c, -1, (255,0,0), 3)
+
+                extLeft = tuple(c[c[:, :, 0].argmin()][0])
+                extRight = tuple(c[c[:, :, 0].argmax()][0])
+
+                middleLine = int(((extRight[0] - extLeft[0]) / 2) + extLeft[0])
+                cv2.line(inimg, (middleLine, -750), (middleLine, 750), (255, 0, 0), 2)
 
         # epsilon = 0.1*cv2.arcLength(contours,True)
         # approx = cv2.approxPolyDP(contours,epsilon,True)
@@ -205,17 +260,17 @@ class Processor:
         # extLeft = tuple(contours[contours[:, :, 0].argmin()][0])
         # extRight = tuple(c[c[:, :, 0].argmax()][0])
         # extTop = tuple(c[c[:, :, 1].argmin()][0])
-        for c in contours:
-            extLeft = tuple(c[c[:, :, 0].argmin()][0])
-            extRight = tuple(c[c[:, :, 0].argmax()][0])
-            extTop = tuple(c[c[:, :, 1].argmin()][0])
-            extBot = tuple(c[c[:, :, 1].argmax()][0])
+        # for c in contours:
+        #     extLeft = tuple(c[c[:, :, 0].argmin()][0])
+        #     extRight = tuple(c[c[:, :, 0].argmax()][0])
+        #     extTop = tuple(c[c[:, :, 1].argmin()][0])
+        #     extBot = tuple(c[c[:, :, 1].argmax()][0])
 
-            areas = cv2.contourArea(c)
-            maxArea = 10
+        #     areas = cv2.contourArea(c)
+        #     maxArea = 10
 
 
-            if areas >= maxArea:
+        #     if areas >= maxArea:
                 #red
                 # cv2.drawContours(inimg, contours, -1, (255,0,0), 3)
 
@@ -305,6 +360,7 @@ class Processor:
         # # newImg = np.vstack((mask, inimg))
         # # Convert BGR to HSV
         # return frame
+
 
     def setFrameCounter(self, num):
         self.frameCounter = num
