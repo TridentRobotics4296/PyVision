@@ -13,12 +13,14 @@ class Processor:
         super().__init__()
 
         # self.ipAddress = "192.168.1.159"
-        hostname = socket.gethostname()    
-        self.ipAddress = socket.gethostbyname(hostname)    
-        self.socketAddress = "5555"
-        self.port = "8080"
+        hostname = socket.gethostname()
+        vs = cv2.VideoCapture(0)    
+        self.ipAddress = "10.42.96.56"#ocket.gethostbyname(hostname)    
+        self.socketAddress = "5801"
+        self.port = "5802"
         self.frameCounter = 5
         self.frame_rate = 30
+        self.rc, self.frame = vs.read()
         self.middle = 0
         self.angle = 0
         self.xDistance = 0
@@ -27,7 +29,6 @@ class Processor:
         self.distance = 0
         self.inchesE = 0
         self.error = 0
-
 
         self.snapArray = []
 
@@ -79,8 +80,6 @@ class Processor:
         self.m_currentX = 0
         self.m_currentY = 0
 
-
-
     def update_config(self, config):
         self.hMin = config['hmin']
         self.hMax = config['hmax']
@@ -121,6 +120,7 @@ class Processor:
         return self.socketAddress
 
     def process(self, frame):
+
         self.counter = 1
         with open('cameraSnapNum.csv') as csv_file:
             csv_reader = csv.reader(csv_file, delimiter=',')
@@ -136,6 +136,7 @@ class Processor:
         if self.counter == 0:
             cv2.imwrite("cameraSnap" + str(self.count) + ".jpg", frame)
 
+        self.frame = frame
 
         inimg = frame
 

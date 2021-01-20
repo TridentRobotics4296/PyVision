@@ -22,7 +22,7 @@ import tracemalloc
 tracemalloc.start()
 
 processor = Processor(debug=True)
-ipAddress = processor.ipAddress
+ipAddress = "192.168.1.158"
 port = processor.port
 frame_rate = processor.frame_rate
 socketAddress = processor.socketAddress
@@ -34,7 +34,7 @@ socket.bind("tcp://*:" + socketAddress)
 
 ctx = zmq.Context()
 s = context.socket(zmq.PUB)
-s.bind("tcp://*:5556")
+s.bind("tcp://192.168.1.158:5557")
 
 visionSocket = context.socket(zmq.SUB)
 
@@ -54,18 +54,18 @@ app = Flask(__name__)
 #vs = VideoStream(usePiCamera=1).start()
 vs = cv2.VideoCapture(0)
 #vs.set(240, 180)
-os.system("v4l2-ctl --set-ctrl=exposure_auto=1")
-time.sleep(1)
-os.system("v4l2-ctl --set-ctrl=gain=16")
-time.sleep(1)
-os.system("v4l2-ctl --set-ctrl=brightness=0")
-time.sleep(1)
-os.system("v4l2-ctl --set-ctrl=contrast=255")
-time.sleep(1)
-os.system("v4l2-ctl --set-ctrl=saturation=255")
-time.sleep(1)
-os.system("v4l2-ctl --set-ctrl=exposure_absolute=30")
-time.sleep(2)
+# os.system("v4l2-ctl --set-ctrl=exposure_auto=1")
+# time.sleep(1)
+# os.system("v4l2-ctl --set-ctrl=gain=16")
+# time.sleep(1)
+# os.system("v4l2-ctl --set-ctrl=brightness=0")
+# time.sleep(1)
+# os.system("v4l2-ctl --set-ctrl=contrast=255")
+# time.sleep(1)
+# os.system("v4l2-ctl --set-ctrl=saturation=255")
+# time.sleep(1)
+# os.system("v4l2-ctl --set-ctrl=exposure_absolute=30")
+# time.sleep(2)
 vs.set(cv2.CAP_PROP_BRIGHTNESS, -0.0000000000001);
 
 # vs.set(cv2.cv.CV_CAP_PROP_FRAME_WIDTH, 320);

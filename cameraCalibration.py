@@ -9,6 +9,7 @@ import time
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtCore import Qt
+
 from PyQt5.QtWidgets import *
 
 from Processor import Processor
@@ -24,7 +25,7 @@ configArray = []
 
 processor = Processor(debug=True)
 
-ipAddress = processor.return_ipAddress()
+ipAddress = "192.168.1.158"
 socketAddress = processor.return_socketAddress()
 
 #  Socket to talk to server
@@ -71,11 +72,11 @@ class Window(QWidget):
 
         self.h_min_slider = QSlider(Qt.Horizontal)
         self.h_min_value_label = QLabel(str(self.config['hmin']))
-        vbox.addWidget(self.configureSlider("H min", 0, 255, self.config['hmin'], 5, self.hMinChanged, self.h_min_slider, self.h_min_value_label))
+        vbox.addWidget(self.configureSlider("H min", 0, 180, self.config['hmin'], 5, self.hMinChanged, self.h_min_slider, self.h_min_value_label))
 
         self.h_max_slider = QSlider(Qt.Horizontal)
         self.h_max_value_label = QLabel(str(self.config['hmax']))
-        vbox.addWidget(self.configureSlider("H max", 0, 255, self.config['hmax'], 5, self.hMaxChanged, self.h_max_slider, self.h_max_value_label))
+        vbox.addWidget(self.configureSlider("H max", 0, 180, self.config['hmax'], 5, self.hMaxChanged, self.h_max_slider, self.h_max_value_label))
 
         self.s_min_slider = QSlider(Qt.Horizontal)
         self.s_min_value_label = QLabel(str(self.config['smin']))
@@ -336,7 +337,8 @@ class Window(QWidget):
 
         if self.counter == 0:
             print('PyQt5 button click')
-            processor.takeSnapshot()
+            cv2.imwrite("cameraSnap" + str(self.count) + ".jpg", processor.frame)
+            # processor.takeSnapshot()
         
         self.counter = 1
 
