@@ -49,6 +49,12 @@ m_V_MAX = 255;
 processor = Processor(debug=True)
 
 #vs = VideoStream(src=0).start()
+# path 
+path = 'D:\\shape_colour_test.png'
+  
+# Using cv2.imread() method 
+frame = cv2.imread(path) 
+  
 time.sleep(2.0)
 
 @app.route("/")
@@ -75,7 +81,7 @@ def process_image(frameCount):
             
             # read the next frame from the video stream, resize it,
             # convert the frame to grayscale, and blur it
-            rc, frame = vs.read()
+        #     rc, frame = vs.read()
 #                frame = imutils.resize(frame, width=400)
             # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             # gray = cv2.GaussianBlur(gray, (7, 7), 0)
