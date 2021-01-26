@@ -73,6 +73,12 @@ vs.set(cv2.CAP_PROP_BRIGHTNESS, -0.0000000000001);
 
 
 #vs = VideoStream(src=0).start()
+# path 
+path = 'D:\\shape_colour_test.png'
+  
+# Using cv2.imread() method 
+frame = cv2.imread(path) 
+  
 time.sleep(2.0)
 
 @app.route("/")
@@ -102,9 +108,9 @@ def process_image(frameCount):
             
             # read the next frame from the video stream, resize it,
             # convert the frame to grayscale, and blur it
-            rc, frame = vs.read()
 
-            img = cv2.resize(frame,(640, 480))
+        #     rc, frame = vs.read()
+#                frame = imutils.resize(frame, width=400)
 
         #     encoded, buffer = cv2.imencode('.jpg', img)
         #     socket.send_string(base64.b64encode(buffer))
@@ -112,6 +118,7 @@ def process_image(frameCount):
         #     rc = vs.set(3,320)
         #     rc = vs.set(4,240)
             #frame = imutils.resize(frame, width=400)
+
             # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
             # gray = cv2.GaussianBlur(gray, (7, 7), 0)
 
