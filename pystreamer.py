@@ -22,7 +22,7 @@ import tracemalloc
 tracemalloc.start()
 
 processor = Processor(debug=True)
-ipAddress = "192.168.1.158"
+ipAddress = "127.0.0.1"
 port = processor.port
 frame_rate = processor.frame_rate
 socketAddress = processor.socketAddress
@@ -34,7 +34,7 @@ socket.bind("tcp://*:" + socketAddress)
 
 ctx = zmq.Context()
 s = context.socket(zmq.PUB)
-s.bind("tcp://192.168.1.158:5557")
+s.bind("tcp://127.0.0.1:5557")
 
 visionSocket = context.socket(zmq.SUB)
 
@@ -74,7 +74,7 @@ vs.set(cv2.CAP_PROP_BRIGHTNESS, -0.0000000000001);
 
 #vs = VideoStream(src=0).start()
 # path 
-path = 'D:\\shape_colour_test.png'
+path = 'D:\\shape_colour_test-640.png'
   
 # Using cv2.imread() method 
 frame = cv2.imread(path) 
@@ -110,6 +110,7 @@ def process_image(frameCount):
             # convert the frame to grayscale, and blur it
 
         #     rc, frame = vs.read()
+            img = cv2.resize(frame,(640, 480))
 #                frame = imutils.resize(frame, width=400)
 
         #     encoded, buffer = cv2.imencode('.jpg', img)
