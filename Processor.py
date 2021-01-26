@@ -1,26 +1,76 @@
 import numpy as np
 import cv2
+import csv
+import socket
+import zmq
 
-
+context = zmq.Context()
+visionSocket = context.socket(zmq.PUB)
+# visionSocket.bind("tcp://*:" + "2323")
 
 class Processor:
     def __init__(self, width=640, height=480, debug=False):
         super().__init__()
+
+        # self.ipAddress = "192.168.1.159"
+        hostname = socket.gethostname()
+        vs = cv2.VideoCapture(0)    
+        self.ipAddress = "10.42.96.56"#ocket.gethostbyname(hostname)    
+        self.socketAddress = "5801"
+        self.port = "5802"
+        self.frameCounter = 5
+        self.frame_rate = 30
+        self.rc, self.frame = vs.read()
+        self.middle = 0
+        self.angle = 0
+        self.xDistance = 0
+        self.pixelD = 0
+        self.barheight = 200
+        self.distance = 0
+        self.inchesE = 0
+        self.error = 0
+
+        self.snapArray = []
 
         self.debug = debug
 
         self.width = width * (2 if debug else 1)
         self.imgWidth = width
         self.height = height
+#home/trident/
+        with open('cameraSnapNum.csv') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            line_counts = 0
+            for row in csv_reader:
+                self.snapArray.append(0)
+                self.snapArray[line_counts] = int(row[1])
+                line_counts += 1
 
-        self.hMin = 80
-        self.sMin = 45
-        self.vMin = 0
+        configArray = []
+#home/trident/
+        with open('cameraCalibration.csv') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            line_count = 0
+            for row in csv_reader:
+                configArray.append(0)
+                configArray[line_count] = int(row[1])
+                line_count += 1
 
-        self.hMax = 120
-        self.sMax = 255
-        self.vMax = 255
 
+        self.hMin = configArray[0]
+        self.hMax = configArray[1]
+        self.sMin = configArray[2]
+        self.sMax = configArray[3]
+        self.vMin = configArray[4]
+        self.vMax = configArray[5]
+        self.exp = configArray[6]
+        self.bri = configArray[7]
+        self.sat = configArray[8]
+        self.con = configArray[9]
+        self.tog = configArray[10]
+
+        self.count = self.snapArray[0]
+        self.frameCounter = self.snapArray[1]
 
         self.m_goalX = int(width / 2)
         self.m_goalY = int(height / 2)
@@ -39,6 +89,12 @@ class Processor:
 
         self.vMin = config['vmin']
         self.vMax = config['vmax']
+        self.exp = config['exp']
+        self.bri = config['bri']
+        self.sat = config['sat']
+        self.con = config['con']
+        self.tog = config['tog']
+
 
     def get_config(self):
         theConfig = dict()
@@ -48,96 +104,229 @@ class Processor:
         theConfig['smax'] = self.sMax
         theConfig['vmin'] = self.vMin
         theConfig['vmax'] = self.vMax
+        theConfig['exp'] = self.exp
+        theConfig['bri'] = self.bri
+        theConfig['sat'] = self.sat
+        theConfig['con'] = self.con
+        theConfig['tog'] = self.tog
+
 
         return theConfig
 
+    def return_ipAddress(self):
+        return self.ipAddress
+
+    def return_socketAddress(self):
+        return self.socketAddress
+
     def process(self, frame):
 
-        # Convert BGR to HSV
-        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        tmpout = np.zeros((self.height, self.width, frame.shape[2]))
+        self.counter = 1
+        with open('cameraSnapNum.csv') as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            line_counts = 0
+            for row in csv_reader:
+                self.snapArray.append(0)
+                self.snapArray[line_counts] = int(row[1])
+                line_counts += 1
 
-        # define range of blue color in HSV
-        lower = np.array([self.hMin, self.sMin, self.vMin])
-        upper = np.array([self.hMax, self.sMax, self.vMax])
+        self.count = self.snapArray[0]
+        self.counter = self.snapArray[1]
+	
+        if self.counter == 0:
+            cv2.imwrite("cameraSnap" + str(self.count) + ".jpg", frame)
 
-        # Threshold the HSV image to get only blue colors
-        mask = cv2.inRange(hsv, lower, upper)
+        self.frame = frame
 
-        contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        inimg = frame
 
-        targetBottom = 0
-        targetCenter = 0
-        
-        if len(contours) > 0:
-            self.target = cv2.boundingRect(contours[0])
-            c_width = self.target[2] # get width of the contour
-            c_height = self.target[3] # get width of the contour
-            biggestContourIndex = 0
+        # Start measuring image processing time (NOTE: does not account for input conversion time):
 
-            contourIndex = -1
+        hsv = cv2.cvtColor(inimg, cv2.COLOR_BGR2HSV)
 
-            for c in contours:
-                # Iterate through all the contours
-                newRect = cv2.boundingRect(c)
+        lower_range = np.array([self.hMin, self.sMin, self.vMin])
+        upper_range = np.array([self.hMax, self.sMax, self.vMax])
+        mask = cv2.inRange(hsv, lower_range, upper_range)
 
-                new_c_width = newRect[2]
-                new_c_height = newRect[3]
+        # stack = cv2.cvtColor(mask, cv2.COLOR_HSV2BGR)
+        outimg = mask
+        # outimg = cv2.Laplacian(inimg, -1, ksize=5, scale=0.25, delta=127)
+        cv2.bitwise_and(inimg, inimg, mask=mask)
+       # cv2.line(inimg, (0,self.barheight), (10000, self.barheight), (255, 100, 255), 2)
 
-                if new_c_width > c_width and new_c_height > c_height:
-                    # find the contour with the biggest width (Probably the target)
-                    self.target = newRect
-                    biggestContourIndex = contourIndex
-                    c_width = new_c_width
-                    c_height = new_c_height
+        # Write a title:
+        # cv2.putText(outimg, "JeVois Python Sandbox", (3, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
 
-            self.targetBottom = self.target[1]
-            self.targetLeft = self.target[0]
-            self.targetCenter = self.target[0] + (self.target[2] / 2)
+        # Write frames/s info from our timer into the edge map (NOTE: does not account for output conversion time):
+        outheight = outimg.shape[0]
+        outwidth = outimg.shape[1]
 
-            crosshairColor = (255, 0, 0)
+        edge = cv2.Canny(mask, 100, 100)
+        blur = cv2.GaussianBlur(mask, (3, 3), 0)
 
-            #  Draw current target object center
-            # m_currentX = self.target.x + (self.target.width / 2)
-            # m_currentY = self.target.y + (self.target.height / 2)
-            # ontarget = False
+        furthestLeft = [0, 0]
+        furthestRight = [0, 0]
+        contours, hierarchy = cv2.findContours(blur, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        cv2.drawContours(inimg, contours, -1, (255, 255, 255), 2)
+        cv2.line(inimg, (320,0), (320,1000), (255, 50, 255), 2)
 
-            # targetColor = cv2.Scalar(0, 0, 255)
+        # epsilon = 0.1*cv2.arcLength(contours,True)
+        # approx = cv2.approxPolyDP(contours,epsilon,True)
 
-            # if ((abs(m_currentX - m_goalX) <= m_deltaX) && (abs(m_currentY - m_goalY) <= m_deltaY))
-            # {
-            #    targetColor = Scalar(0, 255, 0);
-            #    ontarget = true;
-            # }
-            # else if ((abs(m_currentX - m_goalX) <= (3 * m_deltaX)) && (abs(m_currentY - m_goalY) <= (3 * m_deltaY)))
-            # {
-            #    targetColor = Scalar(0, 100, 255);
-            # }
+        # extLeft = tuple(contours[contours[:, :, 0].argmin()][0])
+        # extRight = tuple(c[c[:, :, 0].argmax()][0])
+        # extTop = tuple(c[c[:, :, 1].argmin()][0])
+        for c in contours:
+            extLeft = tuple(c[c[:, :, 0].argmin()][0])
+            extRight = tuple(c[c[:, :, 0].argmax()][0])
+            extTop = tuple(c[c[:, :, 1].argmin()][0])
+            extBot = tuple(c[c[:, :, 1].argmax()][0])
 
-            # line(imgbgr, Point(m_currentX, 0), Point(m_currentX, imgbgr.rows), targetColor, 2);
-            # line(imgbgr, Point(0, m_currentY), Point(imgbgr.cols, m_currentY), targetColor, 2);
+            areas = cv2.contourArea(c)
+            maxArea = np.argmax(areas)
 
-            # if (ontarget)
-            # {
-            #    circle(imgbgr, Point(m_currentX, m_currentY), 5, Scalar(0, 255, 0), 2);
-            #    circle(imgbgr, Point(m_currentX, m_currentY), 15, Scalar(0, 255, 0), 2);
-            #    circle(imgbgr, Point(m_currentX, m_currentY), 25, Scalar(0, 255, 0), 2);
-            # }
 
-            mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
-            tmpout[0:self.height, 0:self.imgWidth] = frame
-            # Just Draw Blue for now
-            cv2.rectangle(tmpout, (self.targetLeft, self.targetBottom), (self.targetLeft + c_width, c_height), (0, 255, 0), 2)
-            # Draw the goal crosshairs
-            cv2.line(tmpout, (self.m_goalX, 0), (self.m_goalX, self.height), crosshairColor, 2)
-            cv2.line(tmpout, (0, self.m_goalY), (self.imgWidth, self.m_goalY), crosshairColor, 2)
+            if areas >= maxArea:
+                self.middle = int(((extRight[0] - extLeft[0]) / 2) + extLeft[0])
+                self.distance = int(extRight[0] - extLeft[0])
+                self.pixelD = self.middle - 320
+                # cv2.circle(inimg, (extLeft), 1, (100, 100, 255), 5)
+                # cv2.circle(inimg, (extRight), 1, (100, 100, 255), 5)
+                #cv2.line(mask, (self.middle, -750), (self.middle, 750), (0, 0, 255), 2)
+                # cv2.line(inimg, (extLeft), (extLeft[0] + pixelD, extRight[1]), (255, 100, 255), 2)
+                cv2.line(inimg, (self.middle,0),(self.middle, 1000), (255,100, 255), 2)
+                #cv2.circle(inimg, (extTop), 1,(100, 100, 255), 5)
+                #cv2.circle(inimg, (extBot), 1,(100, 100, 255), 5)
+                self.xDistance = 813.5 * 2.718281828459045 ** (-0.01378 * self.distance) + 46.67
+                self.inchesE = (39.25 / self.distance) * self.pixelD
+                self.angle = 0.2967 * self.inchesE
+                self.error = (self.middle - 320) / 320
 
-            if self.debug:
-                tmpout[0:self.height, self.imgWidth:self.width] = mask
-                cv2.rectangle(tmpout, (self.targetLeft + self.imgWidth, self.targetBottom), (self.targetLeft + c_width + self.imgWidth, c_height), (0, 255, 0), 2)
-                cv2.line(tmpout, (self.m_goalX + self.imgWidth, 0), (self.m_goalX + self.imgWidth, self.height), crosshairColor, 2)
-                cv2.line(tmpout, (self.imgWidth, self.m_goalY), (self.width, self.m_goalY), crosshairColor, 2)
 
-        # outimg = np.hstack([frame, tmpout])
 
-        return tmpout
+        if self.tog == 0:
+            return inimg
+        elif self.tog == 1: 
+            return mask
+        else:
+            return blur
+
+
+        # hsv = cv2.cvtColor(inimg, cv2.COLOR_BGR2HSV)
+        # lower_range = np.array([self.hMin, self.sMin, self.vMin])
+        # upper_range = np.array([self.hMax, self.sMax, self.vMax])
+        # mask = cv2.inRange(hsv, lower_range, upper_range)
+        # # stack = cv2.cvtColor(mask, cv2.COLOR_HSV2BGR)
+        # outimg = mask
+        # # outimg = cv2.Laplacian(inimg, -1, ksize=5, scale=0.25, delta=127)
+        # cv2.bitwise_and(inimg, inimg, mask=mask)
+        # # Write a title:
+        # # cv2.putText(outimg, "JeVois Python Sandbox", (3, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255))
+        # # Write frames/s info from our timer into the edge map (NOTE: does not account for output conversion time):
+        # outheight = outimg.shape[0]
+        # outwidth = outimg.shape[1]
+        # edge = cv2.Canny(mask, 100, 100)
+        # blur = cv2.GaussianBlur(mask, (5, 5), 0)
+        # furthestLeft = [0, 0]
+        # furthestRight = [0, 0]
+        # contours, hierarchy = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        # #cv2.drawContours(inimg, contours, -1, (255, 255, 255), 2)
+        # # epsilon = 0.1*cv2.arcLength(contours,True)
+        # # approx = cv2.approxPolyDP(contours,epsilon,True)
+        # # extLeft = tuple(contours[contours[:, :, 0].argmin()][0])
+        # # extRight = tuple(c[c[:, :, 0].argmax()][0])
+        # # extTop = tuple(c[c[:, :, 1].argmin()][0])
+        # # warpImg
+
+        # for c in contours:
+        #     rect = cv2.minAreaRect(c)
+        #     verticies = cv2.boxPoints(rect)
+        #     verticies = np.int0(verticies)
+        #     br = verticies[0]
+        #     bl = verticies[1]
+        #     tr = verticies[2]
+        #     tl = verticies[3]
+
+        # #cv2.circle(inimg, (extBot), 1,(100, 100, 255), 5)
+        #     warpImg = self.transform(mask, verticies)
+        #     extLeft = tuple(c[c[:, :, 0].argmin()][0])
+        #     extRight = tuple(c[c[:, :, 0].argmax()][0])
+        #     extTop = tuple(c[c[:, :, 1].argmin()][0])
+        #     extBot = tuple(c[c[:, :, 1].argmax()][0])
+        #     middle = int(((extRight[0] - extLeft[0]) / 2) + extLeft[0])
+        # # jevois.sendSerial("left {} middle {} right {}".format(extLeft[0], middle, extRight[0]))
+        # # pixelD = extRight[0] - extLeft[0]
+        # #v4l2-ctl --set-ctrl=
+        # # cv2.circle(inimg, (extLeft), 1, (100, 100, 255), 5)
+        # # cv2.circle(inimg, (extRight), 1, (100, 100, 255), 5)
+        # # cv2.line(inimg, (middle, -750), (middle, 750), (0, 0, 255), 2)
+        # # cv2.line(inimg, (extLeft), (extLeft[0] + pixelD, extRight[1]), (255, 100, 255), 2)
+        # # cv2.circle(inimg, (extTop), 1,(100, 100, 255), 5)
+        # # cv2.circle(inimg, (extBot), 1,(100, 100, 255), 5)
+        # # distance = 432.2 * 2.718281828459045 ** (-0.0156 * pixelD) + 35.75
+        # tmpout = cv2.bitwise_and(inimg, inimg, mask=mask)
+        # # Convert our OpenCv output image to video output format and send to host over USB:
+        # # bgrimg = cv2.cvtColor(mask, cv2.COLOR_HSV2BGR)
+        # # newImg = np.vstack((mask, inimg))
+        # # Convert BGR to HSV
+        # return frame
+
+    def setFrameCounter(self, num):
+        self.frameCounter = num
+
+    def takeSnapshot(self):
+        from cameraCalibration import Window
+
+        self.frameCounter = 0
+        self.setFrameCounter(self.frameCounter)
+        print(str(self.frameCounter))
+
+        self.count += 1
+        print("cameraSnapshot" + str(self.count))
+        self.counter = 0
+        v = open("cameraSnapNum.csv","w+")
+        v.write("cameraSnapNum," + str(self.count))
+        v.write("\n" + "btnNum," + str(self.counter))
+        v.close()
+
+    def transform(self, image, pts):
+        rect = self.order_points(pts)
+        (tl, tr, br, bl) = rect
+
+        widthA = np.sqrt(((br[0] - bl[0]) ** 2) + ((br[1] - bl[1]) ** 2))
+        widthB = np.sqrt(((tr[0] - tl[0]) ** 2) + ((tr[1] - tl[1]) ** 2))
+        maxWidth = max(int(widthA), int(widthB))
+        heightA = np.sqrt(((tr[0] - br[0]) ** 2) + ((tr[1] - br[1]) ** 2))
+        heightB = np.sqrt(((tl[0] - bl[0]) ** 2) + ((tl[1] - bl[1]) ** 2))
+        maxHeight = max(int(heightA), int(heightB))
+        dst = np.array([
+        [0, 0],
+        [maxWidth - 1, 0],
+        [maxWidth - 1, maxHeight - 1],
+        [0, maxHeight - 1]], dtype = "float32")
+        M = cv2.getPerspectiveTransform(rect, dst)
+        warped = cv2.warpPerspective(image, M, (maxWidth, maxHeight))
+        return warped
+
+    def order_points(self, pts):
+    	# initialzie a list of coordinates that will be ordered
+        # such that the first entry in the list is the top-left,
+        # the second entry is the top-right, the third is the
+        # bottom-right, and the fourth is the bottom-left
+        rect = np.zeros((4, 2), dtype = "float32")
+
+        # the top-left point will have the smallest sum, whereas
+        # the bottom-right point will have the largest sum
+        s = pts.sum(axis = 1)
+        rect[0] = pts[np.argmin(s)]
+        rect[2] = pts[np.argmax(s)]
+
+        # now, compute the difference between the points, the
+        # top-right point will have the smallest difference,
+        # whereas the bottom-left will have the largest difference
+        diff = np.diff(pts, axis = 1)
+        rect[1] = pts[np.argmin(diff)]
+        rect[3] = pts[np.argmax(diff)]
+
+        # return the ordered coordinates
+        return rect
